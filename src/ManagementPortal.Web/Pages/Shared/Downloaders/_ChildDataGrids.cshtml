@@ -1,0 +1,41 @@
+@using ManagementPortal.Localization
+@using ManagementPortal.Permissions
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Mvc.Localization
+@inject IHtmlLocalizer<ManagementPortalResource> L
+@inject IAuthorizationService Authorization
+@model Guid
+<div class="rounded p-3 pb-0 pt-1">
+    <ul class="nav nav-tabs" role="tablist">
+        @if (await Authorization.IsGrantedAsync(ManagementPortalPermissions.DownloaderWebSockets.Default))
+    {
+        <li class="nav-item" role="presentation">
+            <a class="nav-link active" id="DownloaderWebSockets-tab-@Model" data-bs-toggle="tab" data-bs-target="#DownloaderWebSocket-@Model" type="button" role="tab" aria-controls="DownloaderWebSocket" aria-selected="true">@L["DownloaderWebSockets"]</a>
+        </li>
+    }
+    </ul>
+    <div class="tab-content pt-0">
+        @if (await Authorization.IsGrantedAsync(ManagementPortalPermissions.DownloaderWebSockets.Default))
+    {
+        <div class="tab-pane fade show active" id="DownloaderWebSocket-@Model" role="tabpanel" aria-labelledby="DownloaderWebSocket-tab-@Model">
+            @if (await Authorization.IsGrantedAsync(ManagementPortalPermissions.DownloaderWebSockets.Create))
+            {
+                <div class="d-flex justify-content-end mb-3">
+                    <button data-downloader-id="@Model" class="btn btn-primary btn-sm NewDownloaderWebSocketButton" type="button" data-busy-text="@L["Processing"]">
+                        <i class="fa fa-plus"></i> <span>@L["NewDownloaderWebSocket"]</span>
+                    </button>
+                </div>
+            }
+            <table class="table table-striped dataTable no-footer" striped-rows="true" id="DownloaderWebSocketsTable-@Model">
+                <thead>
+                <tr>
+                    <th>@L["Actions"]</th>
+                    					<th>@L["Host"]</th>
+					<th>@L["Port"]</th>
+                </tr>
+                </thead>
+            </table>
+        </div>
+    }
+    </div>
+</div>

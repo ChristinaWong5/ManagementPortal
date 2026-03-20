@@ -1,0 +1,133 @@
+{
+  "template": "app",
+  "imports": {
+    "Volo.Abp.LeptonXTheme": {
+      "version": "5.1.0",
+      "isInstalled": true,
+      "creationTime": "03/18/2026 01:49:31 +00:00"      
+    },
+    "Volo.Abp.TextTemplateManagement": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/18/2026 01:49:31 +00:00"
+    },
+    "Volo.Abp.LanguageManagement": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/18/2026 01:49:31 +00:00"
+    },
+    "Volo.FileManagement": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/18/2026 01:49:31 +00:00"
+    },
+    "Volo.Abp.OpenIddict.Pro": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/18/2026 01:49:31 +00:00"
+    },
+    "Volo.Abp.Gdpr": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/18/2026 01:49:31 +00:00"
+    },
+    "Volo.Abp.AuditLogging.Pro": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/18/2026 01:49:31 +00:00"
+    },
+    "Volo.Abp.Identity.Pro": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/18/2026 01:49:31 +00:00"
+    },
+    "Volo.Abp.Account.Pro": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/18/2026 01:49:31 +00:00"
+    },
+    "Volo.Abp.SettingManagement": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/18/2026 01:49:31 +00:00"
+    },
+    "Volo.Abp.PermissionManagement": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/18/2026 01:49:31 +00:00"
+    },
+    "Volo.Abp.FeatureManagement": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/18/2026 01:49:31 +00:00"
+    }
+  },
+  "folders": {
+    "items": {
+      "src": {},
+      "test": {}
+    }
+  },
+  "packages": {
+    "ConfigTest.Application": {
+      "path": "src/ConfigTest.Application/ConfigTest.Application.abppkg",
+      "folder": "src"
+    },
+    "ConfigTest.Application.Tests": {
+      "path": "test/ConfigTest.Application.Tests/ConfigTest.Application.Tests.abppkg",
+      "folder": "test"
+    },
+    "ConfigTest.Domain.Shared": {
+      "path": "src/ConfigTest.Domain.Shared/ConfigTest.Domain.Shared.abppkg",
+      "folder": "src"
+    },
+    "ConfigTest.Application.Contracts": {
+      "path": "src/ConfigTest.Application.Contracts/ConfigTest.Application.Contracts.abppkg",
+      "folder": "src"
+    },
+    "ConfigTest.HttpApi": {
+      "path": "src/ConfigTest.HttpApi/ConfigTest.HttpApi.abppkg",
+      "folder": "src"
+    },
+    "ConfigTest.HttpApi.Client": {
+      "path": "src/ConfigTest.HttpApi.Client/ConfigTest.HttpApi.Client.abppkg",
+      "folder": "src"
+    },
+    "ConfigTest.Web": {
+      "path": "src/ConfigTest.Web/ConfigTest.Web.abppkg",
+      "folder": "src"
+    },
+    "ConfigTest.Web.Tests": {
+      "path": "test/ConfigTest.Web.Tests/ConfigTest.Web.Tests.abppkg",
+      "folder": "test"
+    },
+    "ConfigTest.EntityFrameworkCore.Tests": {
+      "path": "test/ConfigTest.EntityFrameworkCore.Tests/ConfigTest.EntityFrameworkCore.Tests.abppkg",
+      "folder": "test"
+    },
+    "ConfigTest.EntityFrameworkCore": {
+      "path": "src/ConfigTest.EntityFrameworkCore/ConfigTest.EntityFrameworkCore.abppkg",
+      "folder": "src"
+    },
+    "ConfigTest.TestBase": {
+      "path": "test/ConfigTest.TestBase/ConfigTest.TestBase.abppkg",
+      "folder": "test"
+    },
+    "ConfigTest.Domain.Tests": {
+      "path": "test/ConfigTest.Domain.Tests/ConfigTest.Domain.Tests.abppkg",
+      "folder": "test"
+    },
+    "ConfigTest.HttpApi.Client.ConsoleTestApp": {
+      "path": "test/ConfigTest.HttpApi.Client.ConsoleTestApp/ConfigTest.HttpApi.Client.ConsoleTestApp.abppkg",
+      "folder": "test"
+    },
+    "ConfigTest.DbMigrator": {
+      "path": "src/ConfigTest.DbMigrator/ConfigTest.DbMigrator.abppkg",
+      "folder": "src"
+    },
+    "ConfigTest.Domain": {
+      "path": "src/ConfigTest.Domain/ConfigTest.Domain.abppkg",
+      "folder": "src"
+    }
+  }
+}

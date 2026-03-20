@@ -1,0 +1,24 @@
+<Solution>
+    <Configurations>
+        <Platform Name="Any CPU" />
+    </Configurations>
+    <Folder Name="/src/">
+        <Project Path="src/ManagementPortal.Domain/ManagementPortal.Domain.csproj" />
+        <Project Path="src/ManagementPortal.Application/ManagementPortal.Application.csproj" />
+        <Project Path="src/ManagementPortal.EntityFrameworkCore/ManagementPortal.EntityFrameworkCore.csproj" />
+        <Project Path="src/ManagementPortal.Web/ManagementPortal.Web.csproj" />
+        <Project Path="src/ManagementPortal.Domain.Shared/ManagementPortal.Domain.Shared.csproj" />
+        <Project Path="src/ManagementPortal.Application.Contracts/ManagementPortal.Application.Contracts.csproj" />
+        <Project Path="src/ManagementPortal.HttpApi/ManagementPortal.HttpApi.csproj" />
+        <Project Path="src/ManagementPortal.HttpApi.Client/ManagementPortal.HttpApi.Client.csproj" />
+        <Project Path="src/ManagementPortal.DbMigrator/ManagementPortal.DbMigrator.csproj" />
+    </Folder>
+    <Folder Name="/test/">
+        <Project Path="test/ManagementPortal.Application.Tests/ManagementPortal.Application.Tests.csproj" />
+        <Project Path="test/ManagementPortal.Web.Tests/ManagementPortal.Web.Tests.csproj" />
+        <Project Path="test/ManagementPortal.EntityFrameworkCore.Tests/ManagementPortal.EntityFrameworkCore.Tests.csproj" />
+        <Project Path="test/ManagementPortal.TestBase/ManagementPortal.TestBase.csproj" />
+        <Project Path="test/ManagementPortal.Domain.Tests/ManagementPortal.Domain.Tests.csproj" />
+        <Project Path="test/ManagementPortal.HttpApi.Client.ConsoleTestApp/ManagementPortal.HttpApi.Client.ConsoleTestApp.csproj" />
+    </Folder>
+</Solution>
