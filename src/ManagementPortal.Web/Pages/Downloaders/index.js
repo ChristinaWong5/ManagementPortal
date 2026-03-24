@@ -3,11 +3,11 @@ $(function () {
 
     var downloaderService = window.managementPortal.downloaders.downloaders;
 
-    //var createModal = new abp.ModalManager({
-    //    viewUrl: abp.appPath + 'Downloaders/CreateModal',
-    //    scriptUrl: abp.appPath + 'Pages/Downloaders/createModal.js',
-    //    modalClass: 'downloaderCreate',
-    //});
+    var createModal = new abp.ModalManager({
+        viewUrl: abp.appPath + 'Downloaders/CreateModal',
+        scriptUrl: abp.appPath + 'Pages/Downloaders/createModal.js',
+        modalClass: 'downloaderCreate',
+    });
 
     var editModal = new abp.ModalManager({
         viewUrl: abp.appPath + 'Downloaders/EditModal',
@@ -249,11 +249,11 @@ $(function () {
         }
     };
 
-    //createModal.onResult(function () {
-    //    dataTable.ajax.reloadEx();
-    //    selectOrUnselectAllCheckboxes(false);
-    //    showOrHideContextMenu();
-    //});
+    createModal.onResult(function () {
+        dataTable.ajax.reloadEx();
+        selectOrUnselectAllCheckboxes(false);
+        showOrHideContextMenu();
+    });
 
     editModal.onResult(function () {
         dataTable.ajax.reloadEx();
@@ -261,10 +261,22 @@ $(function () {
         showOrHideContextMenu();
     });
 
-    //$('#NewDownloaderButton').click(function (e) {
-    //    e.preventDefault();
-    //    createModal.open();
-    //});
+    $('#NewDownloaderButton').click(function (e) {
+        e.preventDefault();
+        createModal.open();
+    });
+
+    $('#SaveMaxWorkerButton').click(function (e) {
+        e.preventDefault();
+        var value = parseInt($('#MaxWorkerInput').val(), 10);
+        if (isNaN(value) || value < 1) {
+            abp.notify.warn(l('InvalidValue'));
+            return;
+        }
+        downloaderService.setMaxWorker(value).then(function () {
+            $('#MaxWorkerSaveStatus').fadeIn().delay(2000).fadeOut();
+        });
+    });
 
     $('#SearchForm').submit(function (e) {
         e.preventDefault();

@@ -1,18 +1,37 @@
-using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Text.Json.Serialization;
 
 namespace ManagementPortal.Downloaders;
 
-public class DownloaderConfig
+public class DownloaderRootConfig
 {
-    public string DownloaderEnabled { get; set; }
-    public string DownloaderPollerName { get; set; }
-    public List<DownloaderWebSocketConfig> DownloaderWebSocketList { get; set; }
+    [JsonPropertyName("max_worker")]
+    public int MaxWorker { get; set; }
+
+    [JsonPropertyName("downloader_config")]
+    public List<DownloaderItemConfig> DownloaderConfig { get; set; } = new();
 }
 
-public class DownloaderWebSocketConfig
+public class DownloaderItemConfig
 {
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("downstream_health_file")]
+    public string DownstreamHealthFile { get; set; } = string.Empty;
+
+    [JsonPropertyName("websocket_config")]
+    public List<WebSocketItemConfig> WebsocketConfig { get; set; } = new();
+}
+
+public class WebSocketItemConfig
+{
+    [JsonPropertyName("host")]
+    public string Host { get; set; } = string.Empty;
+
+    [JsonPropertyName("port")]
     public int Port { get; set; }
-    public string Host { get; set; }
 }

@@ -1,5 +1,6 @@
 using ManagementPortal.DownloaderWebSockets;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
@@ -26,36 +27,51 @@ public class DownloadersAppService : DownloadersAppServiceBase, IDownloadersAppS
            input.DownloaderEnabled);
     }
 
-    public override async Task<DownloaderDto> CreateAsync(
-    DownloaderCreateDto input)
+    public override async Task<DownloaderDto> GetAsync(Guid id)
     {
-        var config = await _configService.GetFromFileAsync();
-        // map input to dto and save
-        config.DownloaderEnabled = input.DownloaderEnabled;
-        config.DownloaderPollarName = input.DownloaderPollarName;
-        await _configService.SaveToFileAsync(config);
-        return config;
+        return await _configService.GetFromFileAsync(id)
+               ?? throw new InvalidOperationException($"Downloader with id {id} not found.");
     }
 
-    public override async Task<DownloaderDto> UpdateAsync(
-        Guid id, DownloaderUpdateDto input)
+    public override async Task<DownloaderDto> CreateAsync(DownloaderCreateDto input)
     {
-        var existing = await _configService.GetFromFileAsync();
-        var newDto = new DownloaderDto
+        var dto = new DownloaderDto
         {
             DownloaderEnabled = input.DownloaderEnabled,
             DownloaderPollarName = input.DownloaderPollarName,
-            DownloaderWebSockets = input.DownloaderWebSockets.Any()
-                ? input.DownloaderWebSockets
-                : existing.DownloaderWebSockets
+            DownstreamHealthFile = input.DownstreamHealthFile,
+            DownloaderWebSockets = new List<DownloaderWebSocketDto>()
         };
-        await _configService.SaveToFileAsync(newDto);
-        return await _configService.GetFromFileAsync();
+        return await _configService.AddToFileAsync(dto);
     }
 
-    public override async Task<DownloaderDto> GetAsync(Guid id)
+    public override async Task<DownloaderDto> UpdateAsync(Guid id, DownloaderUpdateDto input)
     {
-        // ignore the id, just return from JSON file
-        return await _configService.GetFromFileAsync();
+        var existing = await _configService.GetFromFileAsync(id);
+        var dto = new DownloaderDto
+        {
+            DownloaderEnabled = input.DownloaderEnabled,
+            DownloaderPollarName = input.DownloaderPollarName,
+            DownstreamHealthFile = input.DownstreamHealthFile,
+            DownloaderWebSockets = input.DownloaderWebSockets.Any()
+                ? input.DownloaderWebSockets
+                : existing?.DownloaderWebSockets ?? new List<DownloaderWebSocketDto>()
+        };
+        return await _configService.UpdateInFileAsync(id, dto);
+    }
+
+    public override async Task DeleteAsync(Guid id)
+    {
+        await _configService.DeleteFromFileAsync(id);
+    }
+
+    public async Task<int> GetMaxWorkerAsync()
+    {
+        return await _configService.GetMaxWorkerAsync();
+    }
+
+    public async Task SetMaxWorkerAsync(int maxWorker)
+    {
+        await _configService.SetMaxWorkerAsync(maxWorker);
     }
 }

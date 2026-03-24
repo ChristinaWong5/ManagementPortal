@@ -32,9 +32,23 @@
         <abp-button id="NewDownloaderButton" text="@L["NewDownloader"].Value" icon="plus" size="Small" button-type="Primary" />
     }
 @*//<suite-custom-code-block-3>*@
+    @if (await Authorization.IsGrantedAsync(ManagementPortalPermissions.Downloaders.Create))
+    {
+        <abp-button id="NewDownloaderButton" text="@L["NewDownloader"].Value" icon="plus" size="Small" button-type="Primary" />
+    }
 @*//</suite-custom-code-block-3>*@
 }
 @*//<suite-custom-code-block-4>*@
+<abp-card class="mb-3">
+    <abp-card-body>
+        <div class="d-flex align-items-center gap-2">
+            <label class="form-label mb-0 fw-semibold me-1">@L["MaxWorker"]:</label>
+            <input type="number" id="MaxWorkerInput" class="form-control form-control-sm" style="width:90px" value="@Model.MaxWorker" min="1" />
+            <abp-button id="SaveMaxWorkerButton" text="@L["Save"].Value" button-type="Primary" size="Small" />
+            <span id="MaxWorkerSaveStatus" class="text-success ms-2" style="display:none">@L["SuccessfullySaved"]</span>
+        </div>
+    </abp-card-body>
+</abp-card>
 @*//</suite-custom-code-block-4>*@
 <abp-card>
     <abp-card-body>

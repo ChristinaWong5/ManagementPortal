@@ -1,14 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Volo.Abp.Application.Dtos;
-using Volo.Abp.AspNetCore.Mvc.UI.RazorPages;
-using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers.Form;
 using ManagementPortal.Downloaders;
-using ManagementPortal.Shared;
 using ManagementPortal.Web.Pages.Downloaders;
 
 namespace ManagementPortal.Web.Pages.Downloaders;
@@ -17,7 +10,8 @@ public class IndexModel : IndexModelBase
 {
     private readonly DownloaderConfigService _configService;
 
-    public DownloaderDto? DownloaderConfig { get; set; }
+    public List<DownloaderDto> DownloaderConfigs { get; set; } = new();
+    public int MaxWorker { get; set; }
 
     public IndexModel(
         IDownloadersAppService downloadersAppService,
@@ -30,21 +24,14 @@ public class IndexModel : IndexModelBase
     public override async Task OnGetAsync()
     {
         await base.OnGetAsync();
-        // Load config from JSON file
         try
         {
-            DownloaderConfig = await _configService.GetFromFileAsync();
+            DownloaderConfigs = await _configService.GetAllFromFileAsync();
+            MaxWorker = await _configService.GetMaxWorkerAsync();
         }
         catch (Exception)
         {
-            // file not found or invalid — config will be null
-            DownloaderConfig = null;
+            DownloaderConfigs = new List<DownloaderDto>();
         }
-    }
-
-    public async Task OnPostAsync(DownloaderDto input)
-    {
-        // Save back to JSON file
-        await _configService.SaveToFileAsync(input);
     }
 }

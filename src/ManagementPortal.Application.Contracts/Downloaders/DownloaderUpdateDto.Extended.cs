@@ -2,5 +2,5 @@ namespace ManagementPortal.Downloaders;
 
 public class DownloaderUpdateDto : DownloaderUpdateDtoBase
 {
-    //Write your custom code here...
+    public string? DownstreamHealthFile { get; set; }
 }
