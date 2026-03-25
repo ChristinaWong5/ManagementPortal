@@ -1,8 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using ManagementPortal.Downloaders;
-using ManagementPortal.Web.Pages.Downloaders;
 
 namespace ManagementPortal.Web.Pages.Downloaders;
 
@@ -24,14 +22,10 @@ public class IndexModel : IndexModelBase
     public override async Task OnGetAsync()
     {
         await base.OnGetAsync();
-        try
-        {
-            DownloaderConfigs = await _configService.GetAllFromFileAsync();
-            MaxWorker = await _configService.GetMaxWorkerAsync();
-        }
-        catch (Exception)
-        {
-            DownloaderConfigs = new List<DownloaderDto>();
-        }
+        var listTask = _downloadersAppService.GetListAsync(new GetDownloadersInput { MaxResultCount = 1000 });
+        var maxWorkerTask = _configService.GetMaxWorkerAsync();
+        await Task.WhenAll(listTask, maxWorkerTask);
+        DownloaderConfigs = new List<DownloaderDto>(listTask.Result.Items);
+        MaxWorker = maxWorkerTask.Result;
     }
 }

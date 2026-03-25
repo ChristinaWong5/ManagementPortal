@@ -1,4 +1,6 @@
 using System.IO;
+using System.Threading.Tasks;
+using ManagementPortal.Downloaders;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -287,6 +289,13 @@ public class ManagementPortalWebModule : AbpModule
             options.WithProperty(x => x.ConsumerKey);
             options.WithProperty(x => x.ConsumerSecret, isSecret: true);
         });
+    }
+
+    public override async Task OnApplicationInitializationAsync(ApplicationInitializationContext context)
+    {
+        await base.OnApplicationInitializationAsync(context);
+        var configService = context.ServiceProvider.GetRequiredService<DownloaderConfigService>();
+        await configService.SeedFromJsonIfEmptyAsync();
     }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)

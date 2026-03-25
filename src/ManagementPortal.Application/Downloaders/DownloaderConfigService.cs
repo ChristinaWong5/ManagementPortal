@@ -2,18 +2,23 @@ using ManagementPortal.DownloaderWebSockets;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Volo.Abp.Application.Dtos;
+using Volo.Abp.DependencyInjection;
+using Volo.Abp.Domain.Repositories;
+using Volo.Abp.SettingManagement;
+using Volo.Abp.Uow;
 
 namespace ManagementPortal.Downloaders;
 
-public class DownloaderConfigService : ManagementPortalAppService
+public class DownloaderConfigService : ITransientDependency
 {
     private readonly string _configFilePath;
+    private readonly IDownloaderRepository _downloaderRepository;
+    private readonly IRepository<DownloaderWebSocket, Guid> _wsRepository;
+    private readonly ISettingManager _settingManager;
 
     private static readonly JsonSerializerOptions ReadOptions = new()
     {
@@ -25,36 +30,97 @@ public class DownloaderConfigService : ManagementPortalAppService
         WriteIndented = true
     };
 
-    public DownloaderConfigService(IConfiguration configuration)
+    public DownloaderConfigService(
+        IConfiguration configuration,
+        IDownloaderRepository downloaderRepository,
+        IRepository<DownloaderWebSocket, Guid> wsRepository,
+        ISettingManager settingManager)
     {
         _configFilePath = configuration["DownloaderConfigFilePath"]
                           ?? "C:\\Users\\KioskAdmin\\Documents\\myFiles\\Test\\config.json";
+        _downloaderRepository = downloaderRepository;
+        _wsRepository = wsRepository;
+        _settingManager = settingManager;
     }
 
-    // --- Downloader ID helpers ---
+    // --- MaxWorker (stored in DB via ABP Settings) ---
 
-    private static Guid IndexToId(int index) =>
-        Guid.Parse($"00000000-0000-0000-0000-{(index + 1):X12}");
-
-    private static int IdToIndex(Guid id)
+    public async Task<int> GetMaxWorkerAsync()
     {
-        var hex = id.ToString("N").Substring(20); // last 12 hex chars
-        return int.Parse(hex, NumberStyles.HexNumber) - 1;
+        var value = await _settingManager.GetOrNullGlobalAsync(DownloaderSettings.MaxWorker);
+        if (int.TryParse(value, out var result))
+            return result;
+
+        // Not in DB yet — read from config.json and store it for next time
+        var root = await ReadRootAsync();
+        await _settingManager.SetGlobalAsync(DownloaderSettings.MaxWorker, root.MaxWorker.ToString());
+        return root.MaxWorker;
     }
 
-    // --- WebSocket ID helpers ---
-    // Format: 00000000-0000-{dlIndex+1 as X4}-0000-{wsIndex+1 as X12}
-
-    private static Guid WsIndexToId(int dlIndex, int wsIndex) =>
-        Guid.Parse($"00000000-0000-{(dlIndex + 1):X4}-0000-{(wsIndex + 1):X12}");
-
-    private static (int dlIndex, int wsIndex) ParseWsId(Guid wsId)
+    public async Task SetMaxWorkerAsync(int maxWorker)
     {
-        var s = wsId.ToString("N"); // 32 hex chars, no dashes
-        var dlPart = s.Substring(12, 4);
-        var wsPart = s.Substring(20, 12);
-        return (int.Parse(dlPart, NumberStyles.HexNumber) - 1,
-                int.Parse(wsPart, NumberStyles.HexNumber) - 1);
+        await _settingManager.SetGlobalAsync(DownloaderSettings.MaxWorker, maxWorker.ToString());
+        await ExportToJsonAsync();
+    }
+
+    // --- Export DB → JSON ---
+
+    public async Task ExportToJsonAsync()
+    {
+        var maxWorker = await GetMaxWorkerAsync();
+        var downloadersTask = _downloaderRepository.GetListAsync();
+        var wsTask = _wsRepository.GetListAsync();
+        await Task.WhenAll(downloadersTask, wsTask);
+        var downloaders = downloadersTask.Result;
+        var allWebSockets = wsTask.Result;
+
+        var wsLookup = allWebSockets
+            .GroupBy(w => w.DownloaderId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var root = new DownloaderRootConfig
+        {
+            MaxWorker = maxWorker,
+            DownloaderConfig = downloaders.Select(d => new DownloaderItemConfig
+            {
+                Enabled = d.DownloaderEnabled,
+                Name = d.DownloaderPollarName ?? string.Empty,
+                DownstreamHealthFile = d.DownstreamHealthFile ?? string.Empty,
+                WebsocketConfig = wsLookup.TryGetValue(d.Id, out var wsList)
+                    ? wsList.Select(w => new WebSocketItemConfig { Host = w.Host ?? string.Empty, Port = w.Port }).ToList()
+                    : new List<WebSocketItemConfig>()
+            }).ToList()
+        };
+
+        await WriteRootAsync(root);
+    }
+
+    // --- Seed DB from JSON (runs once if DB is empty) ---
+
+    [UnitOfWork]
+    public virtual async Task SeedFromJsonIfEmptyAsync()
+    {
+        var count = await _downloaderRepository.GetCountAsync();
+        if (count > 0)
+            return;
+
+        var root = await ReadRootAsync();
+        await _settingManager.SetGlobalAsync(DownloaderSettings.MaxWorker, root.MaxWorker.ToString());
+
+        foreach (var item in root.DownloaderConfig)
+        {
+            var downloader = new Downloader(Guid.NewGuid(), item.Enabled, item.Name)
+            {
+                DownstreamHealthFile = item.DownstreamHealthFile
+            };
+            downloader = await _downloaderRepository.InsertAsync(downloader);
+
+            foreach (var ws in item.WebsocketConfig)
+            {
+                var webSocket = new DownloaderWebSocket(Guid.NewGuid(), downloader.Id, ws.Port, ws.Host);
+                await _wsRepository.InsertAsync(webSocket);
+            }
+        }
     }
 
     // --- File I/O ---
@@ -70,204 +136,5 @@ public class DownloaderConfigService : ManagementPortalAppService
     {
         var json = JsonSerializer.Serialize(root, WriteOptions);
         await File.WriteAllTextAsync(_configFilePath, json);
-    }
-
-    // --- Downloader mapping ---
-
-    private static DownloaderDto MapToDto(DownloaderItemConfig item, int dlIndex) => new()
-    {
-        Id = IndexToId(dlIndex),
-        ConcurrencyStamp = IndexToId(dlIndex).ToString(),
-        DownloaderEnabled = item.Enabled,
-        DownloaderPollarName = item.Name,
-        DownstreamHealthFile = item.DownstreamHealthFile,
-        DownloaderWebSockets = item.WebsocketConfig
-            .Select((ws, wsIdx) => new DownloaderWebSocketDto
-            {
-                Id = WsIndexToId(dlIndex, wsIdx),
-                DownloaderId = IndexToId(dlIndex),
-                Host = ws.Host,
-                Port = ws.Port
-            }).ToList()
-    };
-
-    private static DownloaderItemConfig MapToConfig(DownloaderDto dto) => new()
-    {
-        Enabled = dto.DownloaderEnabled,
-        Name = dto.DownloaderPollarName ?? string.Empty,
-        DownstreamHealthFile = dto.DownstreamHealthFile ?? string.Empty,
-        WebsocketConfig = dto.DownloaderWebSockets
-            .Select(ws => new WebSocketItemConfig { Host = ws.Host ?? string.Empty, Port = ws.Port })
-            .ToList()
-    };
-
-    // --- Downloader CRUD ---
-
-    public async Task<List<DownloaderDto>> GetAllFromFileAsync()
-    {
-        var root = await ReadRootAsync();
-        return root.DownloaderConfig
-            .Select((item, index) => MapToDto(item, index))
-            .ToList();
-    }
-
-    public async Task<DownloaderDto?> GetFromFileAsync(Guid id)
-    {
-        var root = await ReadRootAsync();
-        var index = IdToIndex(id);
-        if (index < 0 || index >= root.DownloaderConfig.Count)
-            return null;
-        return MapToDto(root.DownloaderConfig[index], index);
-    }
-
-    public async Task<DownloaderDto> AddToFileAsync(DownloaderDto input)
-    {
-        var root = await ReadRootAsync();
-        root.DownloaderConfig.Add(MapToConfig(input));
-        await WriteRootAsync(root);
-        var newIndex = root.DownloaderConfig.Count - 1;
-        return MapToDto(root.DownloaderConfig[newIndex], newIndex);
-    }
-
-    public async Task<DownloaderDto> UpdateInFileAsync(Guid id, DownloaderDto input)
-    {
-        var root = await ReadRootAsync();
-        var index = IdToIndex(id);
-        if (index < 0 || index >= root.DownloaderConfig.Count)
-            throw new InvalidOperationException($"Downloader with id {id} not found.");
-        root.DownloaderConfig[index] = MapToConfig(input);
-        await WriteRootAsync(root);
-        return MapToDto(root.DownloaderConfig[index], index);
-    }
-
-    public async Task DeleteFromFileAsync(Guid id)
-    {
-        var root = await ReadRootAsync();
-        var index = IdToIndex(id);
-        if (index < 0 || index >= root.DownloaderConfig.Count)
-            throw new InvalidOperationException($"Downloader with id {id} not found.");
-        root.DownloaderConfig.RemoveAt(index);
-        await WriteRootAsync(root);
-    }
-
-    public async Task<PagedResultDto<DownloaderDto>> GetPagedListFromFileAsync(
-        string filterText = null,
-        string downloaderPollarName = null,
-        bool? downloaderEnabled = null)
-    {
-        var list = await GetAllFromFileAsync();
-
-        if (!filterText.IsNullOrWhiteSpace())
-            list = list.Where(x => x.DownloaderPollarName != null &&
-                x.DownloaderPollarName.Contains(filterText, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-        if (!downloaderPollarName.IsNullOrWhiteSpace())
-            list = list.Where(x => x.DownloaderPollarName != null &&
-                x.DownloaderPollarName.Contains(downloaderPollarName, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-        if (downloaderEnabled.HasValue)
-            list = list.Where(x => x.DownloaderEnabled == downloaderEnabled.Value).ToList();
-
-        return new PagedResultDto<DownloaderDto>(list.Count, list);
-    }
-
-    // --- MaxWorker ---
-
-    public async Task<int> GetMaxWorkerAsync()
-    {
-        var root = await ReadRootAsync();
-        return root.MaxWorker;
-    }
-
-    public async Task SetMaxWorkerAsync(int maxWorker)
-    {
-        var root = await ReadRootAsync();
-        root.MaxWorker = maxWorker;
-        await WriteRootAsync(root);
-    }
-
-    // --- WebSocket CRUD ---
-
-    public async Task<DownloaderWebSocketDto?> GetWebSocketAsync(Guid wsId)
-    {
-        var (dlIndex, wsIndex) = ParseWsId(wsId);
-        var root = await ReadRootAsync();
-        if (dlIndex < 0 || dlIndex >= root.DownloaderConfig.Count)
-            return null;
-        var wsConfig = root.DownloaderConfig[dlIndex].WebsocketConfig;
-        if (wsIndex < 0 || wsIndex >= wsConfig.Count)
-            return null;
-        return new DownloaderWebSocketDto
-        {
-            Id = wsId,
-            DownloaderId = IndexToId(dlIndex),
-            Host = wsConfig[wsIndex].Host,
-            Port = wsConfig[wsIndex].Port
-        };
-    }
-
-    public async Task<List<DownloaderWebSocketDto>> GetWebSocketsByDownloaderIdAsync(Guid downloaderId)
-    {
-        var dlIndex = IdToIndex(downloaderId);
-        var root = await ReadRootAsync();
-        if (dlIndex < 0 || dlIndex >= root.DownloaderConfig.Count)
-            return new List<DownloaderWebSocketDto>();
-        return root.DownloaderConfig[dlIndex].WebsocketConfig
-            .Select((ws, wsIdx) => new DownloaderWebSocketDto
-            {
-                Id = WsIndexToId(dlIndex, wsIdx),
-                DownloaderId = downloaderId,
-                Host = ws.Host,
-                Port = ws.Port
-            }).ToList();
-    }
-
-    public async Task<DownloaderWebSocketDto> AddWebSocketAsync(Guid downloaderId, string host, int port)
-    {
-        var dlIndex = IdToIndex(downloaderId);
-        var root = await ReadRootAsync();
-        if (dlIndex < 0 || dlIndex >= root.DownloaderConfig.Count)
-            throw new InvalidOperationException($"Downloader {downloaderId} not found.");
-        root.DownloaderConfig[dlIndex].WebsocketConfig.Add(new WebSocketItemConfig { Host = host, Port = port });
-        await WriteRootAsync(root);
-        var wsIndex = root.DownloaderConfig[dlIndex].WebsocketConfig.Count - 1;
-        return new DownloaderWebSocketDto
-        {
-            Id = WsIndexToId(dlIndex, wsIndex),
-            DownloaderId = downloaderId,
-            Host = host,
-            Port = port
-        };
-    }
-
-    public async Task<DownloaderWebSocketDto> UpdateWebSocketAsync(Guid wsId, string host, int port)
-    {
-        var (dlIndex, wsIndex) = ParseWsId(wsId);
-        var root = await ReadRootAsync();
-        if (dlIndex < 0 || dlIndex >= root.DownloaderConfig.Count ||
-            wsIndex < 0 || wsIndex >= root.DownloaderConfig[dlIndex].WebsocketConfig.Count)
-            throw new InvalidOperationException($"WebSocket {wsId} not found.");
-        root.DownloaderConfig[dlIndex].WebsocketConfig[wsIndex] = new WebSocketItemConfig { Host = host, Port = port };
-        await WriteRootAsync(root);
-        return new DownloaderWebSocketDto
-        {
-            Id = wsId,
-            DownloaderId = IndexToId(dlIndex),
-            Host = host,
-            Port = port
-        };
-    }
-
-    public async Task DeleteWebSocketAsync(Guid wsId)
-    {
-        var (dlIndex, wsIndex) = ParseWsId(wsId);
-        var root = await ReadRootAsync();
-        if (dlIndex < 0 || dlIndex >= root.DownloaderConfig.Count ||
-            wsIndex < 0 || wsIndex >= root.DownloaderConfig[dlIndex].WebsocketConfig.Count)
-            throw new InvalidOperationException($"WebSocket {wsId} not found.");
-        root.DownloaderConfig[dlIndex].WebsocketConfig.RemoveAt(wsIndex);
-        await WriteRootAsync(root);
     }
 }

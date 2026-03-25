@@ -138,6 +138,7 @@ public class ManagementPortalDbContext : AbpDbContext<ManagementPortalDbContext>
                 b.ConfigureByConvention();
                 b.Property(x => x.DownloaderEnabled).HasColumnName(nameof(Downloader.DownloaderEnabled));
                 b.Property(x => x.DownloaderPollarName).HasColumnName(nameof(Downloader.DownloaderPollarName));
+                b.Property(x => x.DownstreamHealthFile).HasColumnName(nameof(Downloader.DownstreamHealthFile));
                 b.HasMany(x => x.DownloaderWebSockets).WithOne().HasForeignKey(x => x.DownloaderId).IsRequired().OnDelete(DeleteBehavior.Cascade);
             });
         }
